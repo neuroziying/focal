@@ -57,6 +57,8 @@ def finetune(
 
             # forward pass
             logits = classifier(aug_freq_loc_inputs)
+            if args.dataset == "Shikano":
+                logits = logits.squeeze(-1)
             loss = classifier_loss_func(logits, labels)
 
             # back propagation

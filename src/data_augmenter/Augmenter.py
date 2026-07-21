@@ -13,13 +13,21 @@ from data_augmenter.ScalingAugmenter import ScalingAugmenter
 from data_augmenter.NegationAugmenter import NegationAugmenter
 from data_augmenter.HorizontalFlipAugmenter import HorizontalFlipAugmenter
 from data_augmenter.ChannelShuffleAugmenter import ChannelShuffleAugmenter
-from data_augmenter.TimeWarpAugmenter import TimeWarpAugmenter
-from data_augmenter.MagWarpAugmenter import MagWarpAugmenter
+
+try:
+    from data_augmenter.TimeWarpAugmenter import TimeWarpAugmenter
+except ImportError:
+    TimeWarpAugmenter = None
+
+try:
+    from data_augmenter.MagWarpAugmenter import MagWarpAugmenter
+except ImportError:
+    MagWarpAugmenter = None
+
 from data_augmenter.TimeMaskAugmenter import TimeMaskAugmenter
 
 from data_augmenter.FreqMaskAugmenter import FreqMaskAugmenter
 from data_augmenter.PhaseShiftAugmenter import PhaseShiftAugmenter
-
 
 class Augmenter:
     def __init__(self, args) -> None:

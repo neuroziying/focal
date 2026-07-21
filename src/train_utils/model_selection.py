@@ -45,9 +45,11 @@ def init_pretrain_framework(args, backbone_model):
 
 
 def init_loss_func(args):
-    """Initialize the loss function according to the config."""
     if args.train_mode == "supervised" or args.stage == "finetune":
-        loss_func = nn.CrossEntropyLoss()
+        if args.dataset == "Shikano":
+            loss_func = nn.MSELoss()
+        else:
+            loss_func = nn.CrossEntropyLoss()
     elif args.train_mode == "contrastive":
         if args.learn_framework in {"FOCAL"}:
             loss_func = FOCALLoss(args).to(args.device)

@@ -9,6 +9,14 @@ all_value_ranges = {
             "seismic": 14450094.0,
         },
     },
+    "Shikano": {
+        "time": {
+            "str": 10,
+            "cbl": 10,
+            "ctx": 10,
+            "rsc": 10,
+        },
+    },
 }
 
 

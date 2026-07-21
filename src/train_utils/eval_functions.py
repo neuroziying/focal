@@ -10,7 +10,21 @@ from train_utils.loss_calc_utils import calc_pretrain_loss
 
 def eval_task_metrics(args, labels, predictions):
     """Evaluate the downstream task metrics."""
-    if args.task in {"distance_classification", "speed_classification"}:
+    if args.dataset == "Shikano":
+        # Continuous regression target (wheel speed) -- accuracy/f1/confusion
+        # matrix don't apply here. R^2 and RMSE stand in as pretrain-time
+        # diagnostics only (this KNN probe is a sanity check, not the real
+        # speed-regression evaluation -- that gets designed properly at
+        # finetune time). Returned in the same 3-slot shape so
+        # val_and_logging's downstream logging doesn't need to change; the
+        # "acc"/"f1" log labels are misleading for this dataset but harmless.
+        from sklearn.metrics import r2_score
+        labels_arr = np.asarray(labels)
+        preds_arr = np.asarray(predictions)
+        r2 = r2_score(labels_arr, preds_arr)
+        rmse = np.sqrt(np.mean((labels_arr - preds_arr) ** 2))
+        return r2, -rmse, []
+    elif args.task in {"distance_classification", "speed_classification"}:
         num_classes = args.dataset_config[args.task]["num_classes"]
         mean_acc = 1 - (np.abs(labels-predictions) / np.maximum(labels, (num_classes - 1) - labels))
         mean_acc = np.nan_to_num(mean_acc, nan=1.0)
@@ -24,7 +38,6 @@ def eval_task_metrics(args, labels, predictions):
         conf_matrix = []
 
     return mean_acc, mean_f1, conf_matrix
-
 
 def eval_supervised_model(args, classifier, augmenter, dataloader, loss_func):
     classifier.eval()
@@ -42,7 +55,10 @@ def eval_supervised_model(args, classifier, augmenter, dataloader, loss_func):
             logits = classifier(freq_loc_inputs)
             classifier_loss_list.append(loss_func(logits, labels).item())
 
-            predictions = logits.argmax(dim=1, keepdim=False)
+            if args.dataset == "Shikano":
+                predictions = logits.squeeze(-1)  # 回归输出,直接用标量预测值,不做argmax
+            else:
+                predictions = logits.argmax(dim=1, keepdim=False)
             labels = labels.argmax(dim=1, keepdim=False) if labels.dim() > 1 else labels
 
             # for future computation of acc or F1 score

@@ -36,7 +36,17 @@ def compute_knn(args, classifier, augmenter, data_loader_train):
     sample_embeddings = np.concatenate(sample_embeddings)
     labels = np.concatenate(labels)
 
-    estimator = KNeighborsClassifier()
+    if args.dataset == "Shikano":
+        # Shikano's label is continuous wheel speed, not a discrete class --
+        # KNeighborsClassifier chokes on continuous y (see the "Unknown
+        # label type: continuous" crash). Use the regressor variant instead.
+        # This is gated on dataset name so MOD/ACIDS/etc. keep using the
+        # classifier unchanged.
+        estimator = KNeighborsRegressor()
+    else:
+        estimator = KNeighborsClassifier()
+    estimator.fit(sample_embeddings, labels)
+    return estimator
     estimator.fit(sample_embeddings, labels)
 
     return estimator
