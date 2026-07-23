@@ -46,7 +46,7 @@ def init_pretrain_framework(args, backbone_model):
 
 def init_loss_func(args):
     if args.train_mode == "supervised" or args.stage == "finetune":
-        if args.dataset == "Shikano":
+        if args.dataset.startswith("Shikano"):
             loss_func = nn.MSELoss()
         else:
             loss_func = nn.CrossEntropyLoss()

@@ -36,7 +36,7 @@ def compute_knn(args, classifier, augmenter, data_loader_train):
     sample_embeddings = np.concatenate(sample_embeddings)
     labels = np.concatenate(labels)
 
-    if args.dataset == "Shikano":
+    if args.dataset.startswith("Shikano"):
         # Shikano's label is continuous wheel speed, not a discrete class --
         # KNeighborsClassifier chokes on continuous y (see the "Unknown
         # label type: continuous" crash). Use the regressor variant instead.

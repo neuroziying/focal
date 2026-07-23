@@ -26,9 +26,14 @@ def finetune(
     num_batches,
 ):
     """Fine tune the backbone network with only the class layer."""
-    # Load the pretrained feature extractor
-    pretrain_weight = os.path.join(args.weight_folder, f"{args.dataset}_{args.model}_pretrain_latest.pt")
-    classifier = load_model_weight(args, classifier, pretrain_weight, load_class_layer=False)
+    # Load the pretrained feature extractor -- unless this is the
+    # random-init control condition, in which case we deliberately skip
+    # this and keep the freshly-initialized (never trained) backbone.
+    if args.random_init_backbone:
+        logging.info("=\t[Control condition] Using randomly initialized backbone -- pretrained weights NOT loaded")
+    else:
+        pretrain_weight = os.path.join(args.weight_folder, f"{args.dataset}_{args.model}_pretrain_latest.pt")
+        classifier = load_model_weight(args, classifier, pretrain_weight, load_class_layer=False)
     learnable_parameters = set_learnable_params_finetune(args, classifier)
 
     # Init the optimizer, scheduler, and weight files
@@ -36,10 +41,28 @@ def finetune(
     lr_scheduler = define_lr_scheduler(args, optimizer)
     best_weight, latest_weight = set_finetune_weights(args)
 
+    # Standardize regression targets for training stability -- raw wheel
+    # speed has a large scale (hundreds), which makes MSE loss huge and
+    # gradient descent poorly conditioned for a shallow probe head. Stats
+    # are computed from the TRAIN split only (per LOAO fold), never
+    # val/test, to avoid leakage across the held-out animal/sessions.
+    if args.dataset.startswith("Shikano"):
+        all_train_labels = []
+        for _, labels in train_dataloader:
+            all_train_labels.append(labels)
+        all_train_labels = torch.cat(all_train_labels)
+        args.label_mean = all_train_labels.mean().item()
+        args.label_std = all_train_labels.std().item()
+        logging.info(f"=\t[Label standardization] mean={args.label_mean:.3f}, std={args.label_std:.3f}")
+
     # Training loop
     logging.info("---------------------------Start Fine Tuning-------------------------------")
     start = time_sync()
-    best_val_acc = 0
+    # NOTE: was `best_val_acc = 0`. R^2 can be negative early in training
+    # (worse than predicting the mean), which meant no checkpoint would
+    # ever be saved as "best" until R^2 turned positive. -inf ensures the
+    # first eval always establishes a baseline "best" checkpoint.
+    best_val_acc = -np.inf
 
     val_epochs = 5
     for epoch in range(args.dataset_config[args.learn_framework]["finetune_lr_scheduler"]["train_epochs"]):
@@ -57,9 +80,12 @@ def finetune(
 
             # forward pass
             logits = classifier(aug_freq_loc_inputs)
-            if args.dataset == "Shikano":
-                logits = logits.squeeze(-1)
-            loss = classifier_loss_func(logits, labels)
+            if args.dataset.startswith("Shikano"):
+                logits = logits.squeeze(-1)  # (batch, 1) -> (batch,), regression output
+                norm_labels = (labels - args.label_mean) / args.label_std
+                loss = classifier_loss_func(logits, norm_labels)
+            else:
+                loss = classifier_loss_func(logits, labels)
 
             # back propagation
             optimizer.zero_grad()

@@ -17,6 +17,15 @@ all_value_ranges = {
             "rsc": 10,
         },
     },
+    "Shikano_bin15": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
+    "Shikano_bin45": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
+    "Shikano_bin60": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
 }
 
 

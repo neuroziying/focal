@@ -6,18 +6,19 @@ from tqdm import tqdm
 # utils
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from train_utils.knn import extract_sample_features
-from train_utils.loss_calc_utils import calc_pretrain_loss   
+from train_utils.loss_calc_utils import calc_pretrain_loss
+
 
 def eval_task_metrics(args, labels, predictions):
     """Evaluate the downstream task metrics."""
-    if args.dataset == "Shikano":
+    if args.dataset.startswith("Shikano"):
         # Continuous regression target (wheel speed) -- accuracy/f1/confusion
-        # matrix don't apply here. R^2 and RMSE stand in as pretrain-time
-        # diagnostics only (this KNN probe is a sanity check, not the real
-        # speed-regression evaluation -- that gets designed properly at
-        # finetune time). Returned in the same 3-slot shape so
-        # val_and_logging's downstream logging doesn't need to change; the
-        # "acc"/"f1" log labels are misleading for this dataset but harmless.
+        # matrix don't apply here. R^2 and RMSE are computed in the ORIGINAL
+        # (un-standardized) speed units, since predictions are converted
+        # back to real units before this function is called (see
+        # eval_supervised_model below). -RMSE is returned in the "f1" slot
+        # so both metrics read "larger is better", consistent with the
+        # classification case.
         from sklearn.metrics import r2_score
         labels_arr = np.asarray(labels)
         preds_arr = np.asarray(predictions)
@@ -39,6 +40,7 @@ def eval_task_metrics(args, labels, predictions):
 
     return mean_acc, mean_f1, conf_matrix
 
+
 def eval_supervised_model(args, classifier, augmenter, dataloader, loss_func):
     classifier.eval()
     # iterate over all batches
@@ -53,13 +55,19 @@ def eval_supervised_model(args, classifier, augmenter, dataloader, loss_func):
 
             # forward pass
             logits = classifier(freq_loc_inputs)
-            classifier_loss_list.append(loss_func(logits, labels).item())
 
-            if args.dataset == "Shikano":
-                predictions = logits.squeeze(-1)  # 回归输出,直接用标量预测值,不做argmax
+            if args.dataset.startswith("Shikano"):
+                logits = logits.squeeze(-1)  # (batch, 1) -> (batch,)
+                # loss is computed in standardized space (matches training),
+                # but predictions/labels used for R^2/RMSE are converted
+                # back to real speed units for interpretability
+                norm_labels = (labels - args.label_mean) / args.label_std
+                classifier_loss_list.append(loss_func(logits, norm_labels).item())
+                predictions = logits * args.label_std + args.label_mean
             else:
+                classifier_loss_list.append(loss_func(logits, labels).item())
                 predictions = logits.argmax(dim=1, keepdim=False)
-            labels = labels.argmax(dim=1, keepdim=False) if labels.dim() > 1 else labels
+                labels = labels.argmax(dim=1, keepdim=False) if labels.dim() > 1 else labels
 
             # for future computation of acc or F1 score
             saved_predictions = predictions.cpu().numpy()
@@ -111,6 +119,7 @@ def eval_pretrained_model(args, default_model, estimator, augmenter, dataloader,
     metrics = eval_task_metrics(args, labels, predictions)
 
     return mean_loss, metrics
+
 
 def val_and_logging(
     args,
