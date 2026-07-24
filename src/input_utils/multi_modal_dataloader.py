@@ -42,7 +42,8 @@ def create_dataloader(dataloader_option, args, batch_size=64, workers=5):
         dataloader = DataLoader(dataset, batch_sampler=sampler, num_workers=workers)
     else:
         dataloader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=(dataloader_option == "train"), num_workers=workers
+            dataset, batch_size=batch_size, shuffle=(dataloader_option == "train"), 
+            num_workers=workers, drop_last=(dataloader_option != "train")
         )
 
     return dataloader
