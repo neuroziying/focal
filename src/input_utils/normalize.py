@@ -26,6 +26,24 @@ all_value_ranges = {
     "Shikano_bin60": {
         "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
     },
+    "Shikano_trialspliced": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
+    "Shikano_trialspliced_bin15": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
+    "Shikano_bin45_seg3": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
+    "Shikano_bin45_seg5": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
+    "Shikano_bin45_seg9": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
+    "Shikano_bin45_seg15": {
+        "time": {"str": 10, "cbl": 10, "ctx": 10, "rsc": 10},
+    },
 }
 
 
