@@ -196,7 +196,6 @@ class ConvBlock(nn.Module):
         # print("ConvBlock input: ", x.shape)
         # input conv layer
         conv_out = self.conv_layer_in(x)
-
         # print("ConvBlock conv_out: ", conv_out.shape)
 
         # inter conv layers
